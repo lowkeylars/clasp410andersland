@@ -107,6 +107,7 @@ class SpreadModel:
                 self.prob_fatal = float(self.prob_fatal)
                 if not self.prob_fatal >= 0: self.end_check()
             else: self.prob_fatal = 0
+
         # If center case, set parameters accordingly
         else:
             self.prob_spread = 1
@@ -118,6 +119,14 @@ class SpreadModel:
         if not self.num_iterations.isdigit(): self.end_check()
         self.num_iterations = int(self.num_iterations)
         if not self.num_iterations > 0: self.end_check()
+
+        # Creating Arrays For Line Plots Accordingly
+        # Deceased (0), Bare/Immune (1), Fire/Infected (2), and Healthy/Forested (3)
+        self.array_0 = [0] * (self.num_iterations + 1)
+        self.array_1 = [0] * (self.num_iterations + 1)
+        self.array_2 = [0] * (self.num_iterations + 1)
+        self.array_3 = [0] * (self.num_iterations + 1)
+        
 
         # Figure display setting
         self.figure_display = input("Display figure for every iteration or one once finished, E (Every) or F (Finished): ")
@@ -155,17 +164,42 @@ class SpreadModel:
         # Logical indexing to change "true" spots to bare
         self.forest[isbare] = 1
 
+        # Initializing Line Plot Arrays
+        # WHAT = initializing # of cell counts for line plot lines
+        for i in range(self.nx):
+            for j in range(self.ny):
+                # If bare
+                if(self.forest[j,i] == 1):
+                    self.array_1[0] = self.array_1[0] + 1
+                # If forest
+                elif (self.forest[j,i] == 2):
+                    self.array_2[0] = self.array_2[0] + 1
+                # If fire
+                else:
+                    self.array_3[0] = self.array_3[0] + 1
+        
+        # Setting Initial Variabls
+        # WHAT = these will be incremented/decremented throughout the program
+        self.current_deceased = 0
+        self.current_bare = self.array_1[0]
+        self.current_forest = self.array_2[0]
+        self.current_fire = self.array_3[0]
+
+
     # Spread Function
     # WHAT = applies probability for disease or fire spread
     def spread(self, j_neighbor, i_neighbor):
         if np.random.rand() < self.prob_spread:
             self.forest[j_neighbor, i_neighbor] = 3
+            self.current_forest -= 1
+            self.current_fire += 1
 
     # Model Running
     # WHAT = implements model logic, running 
     def run_model(self):
         # Starting with the first iteration
         current_iterations = 0
+
         # Looping through all iterations of the model
         while current_iterations < self.num_iterations:
 
@@ -187,13 +221,16 @@ class SpreadModel:
                     # Do nothing if spot isn't on fire (i.e. there's no spread)
                     if fire_grid[j, i] == 0: 
                         pass
+                    
                     # Otherwise, apply the spread logic to each neighbor
                     else: 
                         # If Disease Mode, check if they died...
                         # i.e. if they die they can't infect others
                         # If Forest Mode, will always evaluate to false b/c prob_fatal = 0
                         if np.random.rand() < self.prob_fatal:
-                            self.forest[j, i] = 0
+                            self.forest[j, i] = 0 
+                            self.current_deceased += 1
+                            self.current_fire -= 1
                         # Otherwise, apply the spread logic
                         else:
                             # Analogous logic for each of the four neighbors ensures cell
@@ -212,54 +249,106 @@ class SpreadModel:
                                 self.spread(j, i + 1)
                             # Finally, set the current cell to bare/immune
                             self.forest[j, i] = 1
+                            self.current_fire -= 1
+                            self.current_bare += 1
+
+                
+                self.array_0[current_iterations] = self.current_deceased
+                self.array_1[current_iterations] = self.current_bare
+                self.array_2[current_iterations] = self.current_forest
+                self.array_3[current_iterations] = self.current_fire
+
+                
+
+
                         
                         
 
     # Display Results
     # WHAT = displays a color map signifying the gird
     def display_results(self, iteration_number):
-        # If fire, three colors tan = bare; darkgreen = forest; crimson = fire
+        ## Grid Plot ##
+        fig, ax = plt.subplots(1,1)
+        
         if self.model_type == 'W':
+            # Set title
+            ax.set_title(f"Disease Spread - Iteration {iteration_number}", fontsize = 20)
+            # Set plot
             forest_cmap = ListedColormap(['tan', 'darkgreen', 'crimson'])
-            # Create figure and set of axes:
-            fig, ax = plt.subplots(1,1)
             ax.pcolor(self.forest, cmap=forest_cmap, vmin=1, vmax=3)
-            ax.set_title(f"Forest Fire Spread - Iteration {iteration_number}", fontsize = 20)
-            ax.set_xlabel("X Coordinate", fontsize = 16)
-            ax.set_ylabel("Y Coordinate", fontsize = 16)
-            # Setting legend (documentation: https://stackoverflow.com/questions/39500265/how-to-manually-create-a-legend)
+            # If fire, three colors tan = bare; darkgreen = forest; crimson = fire
             legend_labels = ['Bare', 'Forested', 'Fire']
             legend_colors = ['tan', 'darkgreen', 'crimson']
-            patches = [Patch(color=color, label=label) for color, label in zip(legend_colors, legend_labels)]
-            ax.legend(handles=patches, loc='upper right')  # You can change the location with the 'loc' argument
-             # Set x and y ticks to only show integers
-            ax.set_xticks(range(self.forest.shape[1] + 1))  # Adjust based on array dimensions
-            ax.tick_params(axis='x', labelsize=12)
-            ax.set_yticks(range(self.forest.shape[0] + 1))  # Adjust based on array dimensions
-            ax.tick_params(axis='y', labelsize=12)
-            # show the plot
-            plt.savefig(f'output_fire_{iteration_number}.png')
-            plt.show()
-        # Otherwise, it's disease and four colors black = dead; tan = immune
-        # darkgreen = uninfected; crimson = infected
         else:
-            forest_cmap = ListedColormap(['black', 'tan', 'darkgreen', 'crimson'])
-            # Create figure and set of axes:
-            fig, ax = plt.subplots(1,1)
-            ax.pcolor(self.forest, cmap=forest_cmap, vmin=0, vmax=3)
+            # Set title
             ax.set_title(f"Disease Spread - Iteration {iteration_number}", fontsize = 20)
-            ax.set_xlabel("X Coordinate", fontsize = 16)
-            ax.set_ylabel("Y Coordinate", fontsize = 16)
-            # Setting legend (documentation: https://stackoverflow.com/questions/39500265/how-to-manually-create-a-legend)
+            # Set plot
+            forest_cmap = ListedColormap(['black', 'tan', 'darkgreen', 'crimson'])
+            ax.pcolor(self.forest, cmap=forest_cmap, vmin=0, vmax=3)
+            # If fire, four colors black = deceased; tan = immune; darkgreen = healthy; crimson = infected
             legend_labels = ['Deceased', 'Immune', 'Healthy', 'Infected']
             legend_colors = ['black', 'tan', 'darkgreen', 'crimson']
+
+        # Setting axes
+        ax.set_xlabel("X Coordinate", fontsize = 16)
+        ax.set_ylabel("Y Coordinate", fontsize = 16)
+
+        # Setting legend labels
+        # Setting legend (documentation: https://stackoverflow.com/questions/39500265/how-to-manually-create-a-legend)
+        patches = [Patch(color=color, label=label) for color, label in zip(legend_colors, legend_labels)]
+        ax.legend(handles=patches, loc='upper right')
+        
+        # Set x and y ticks to only show integers
+        ax.set_xticks(range(self.forest.shape[1] + 1))
+        ax.tick_params(axis='x', labelsize=12)
+        ax.set_yticks(range(self.forest.shape[0] + 1))
+        ax.tick_params(axis='y', labelsize=12)
+        
+        # show the plot
+        plt.savefig(f'output_{iteration_number}.png')
+        plt.show()
+        
+        ##Line Plot##
+        if(iteration_number == self.num_iterations):
+            # X axis length
+            x_values = list(range(self.num_iterations + 1))
+            # Create figure
+            fig, ax = plt.subplots(1, 1)
+            # Plot the four arrays
+            if self.model_type == 'W':
+                # Set title
+                ax.set_title("Forest Fire Parameters Over Iterations", fontsize = 20)
+                # Plot lines
+                ax.plot(x_values, self.array_1, color='tan', label='Bare', marker='x')
+                ax.plot(x_values, self.array_2, color='darkgreen', label='Forested', marker='s')
+                ax.plot(x_values, self.array_3, color='crimson', label='Fire', marker='^')
+            else:
+                # Set title
+                ax.set_title("Disease Spread Parameters Over Iterations", fontsize = 20)
+                # Plot lines
+                ax.plot(x_values, self.array_0, color='black', label='Deceased', marker='o')
+                ax.plot(x_values, self.array_1, color='tan', label='Immune', marker='x')
+                ax.plot(x_values, self.array_2, color='darkgreen', label='Healthy', marker='s')
+                ax.plot(x_values, self.array_3, color='crimson', label='Infected', marker='^')
+            
+            # Set the title and labels
+            ax.set_xlabel("Iterations", fontsize=16)
+            ax.set_ylabel("Values", fontsize=16)
+
+            # Set legend
             patches = [Patch(color=color, label=label) for color, label in zip(legend_colors, legend_labels)]
-            ax.legend(handles=patches, loc='upper right')  # You can change the location with the 'loc' argument
-             # Set x and y ticks to only show integers
-            ax.set_xticks(range(self.forest.shape[1] + 1))  # Adjust based on array dimensions
-            ax.set_yticks(range(self.forest.shape[0] + 1))  # Adjust based on array dimensions
-            # show the plot
-            plt.savefig(f'output_disease_{iteration_number}.png')
+            ax.legend(handles=patches, loc='upper right') 
+
+            # Set the x and y ticks (if you want to show integer increments, e.g., on the x-axis)
+            ax.set_xticks(range(0, self.num_iterations + 1))
+            ax.tick_params(axis='x', labelsize=12)
+            ax.tick_params(axis='y', labelsize=12)
+            # Trying to find the max value that could possibly be plotted, then adding 2 more as buffer
+            y_max = max(max(self.array_0), max(self.array_1), max(self.array_2), max(self.array_3))
+            ax.set_yticks(range(0, int(y_max) + 2, 2))
+
+            # Show the plot
+            plt.savefig(f'output_line_plot.png')
             plt.show()
     
     # Delete Files Function
