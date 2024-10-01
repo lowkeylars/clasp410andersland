@@ -262,7 +262,6 @@ class SpreadModel:
 
 
                         
-                        
 
     # Display Results
     # WHAT = displays a color map signifying the gird
