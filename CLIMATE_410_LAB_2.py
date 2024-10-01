@@ -7,8 +7,20 @@ NAME: Lars Andersland
 Introduction Notes:
 -------------------
 General Introduction:
-I have used object-oriented programming for this lab. Most notably, I have changed
-my commenting convention to be more docstring oriented.
+I have used object-oriented programming for this lab. Most notably from last lab, I have changed
+my commenting convention to be more docstring oriented. 
+
+NOTE: I did see Dr. Welling's comment from Lab 1 to use inheritance if I choose an object-oriented apporach 
+in future labs. However, when I returned to the code to start implementing this (i.e. making base class with
+separate Euler and RK8 derived classes), I found it to not be as suitable for this lab, with the derived classes
+only containing their "derivative functions" as members. I have thus intentionally not implemented inheritance
+as a result for this lab. 
+
+For the future, I will likely not create my code using an object-oriented approach just so I can be more 
+confident that I am within the bounds of the code structure expectations for this course. I had not been thinking 
+about inheritence but can definitely see why it is generally a good choice; this comment has revealed that there
+may be other coding expectations of the object-oriented approach that I may be unaware of. So, these problems of coding 
+misalignment should not persist with future labs, as I plan to align more directly with code in class.
 
 Commenting Convention:
 I have docstrings for every function (as well as a summary of them all at the beginning
