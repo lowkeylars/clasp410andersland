@@ -1,10 +1,21 @@
+#!/bin/bash/env python3
 # CLIMATE 410
 # LAB #4 - HEAT DIFFUSION & PERMAFROST
 # DUE 10/31/2024
 # STUDENT NAME - LARS ANDERSLAND
 
+# improvements - docstring, break up code to take plotting out of main, add a convergence check
 '''
 Tools and methods for solving our heat equation/diffusion
+
+CHANGES
+-------
+- [x] added shebang at top of file
+- [x] redefine the map variable so it doesn't overwrite built in map function
+- [ ] move unit tests and plotting to external function
+- [ ] add convergence check to reduce compute time then run each experiment once instead
+- [ ] improve the temp_kanger docstring
+- [ ] improve the docstring for script
 '''
 import numpy as np
 import matplotlib.pyplot as plt
@@ -18,6 +29,18 @@ def temp_kanger(t, offset_temp):
     '''
     For an array of times in days, return timeseries of temperature for
     Kangerlussuaq, Greenland.
+
+    Parameters
+    ----------
+    t : np.ndarray
+        array of times to interpolate temperatures to
+    offset_temp : float 
+        how much to offset the temperature by
+
+    Return
+    ------
+        : np.ndarray
+        array of temperatures interpolated to the unit in the solver
     '''
     t_amp = (t_kanger - t_kanger.mean()).max()
     return t_amp*np.sin(np.pi/180 * t - np.pi/2) + t_kanger.mean() + offset_temp
@@ -72,6 +95,7 @@ def heatdiff(xmax, tmax, dx, dt, offset_temp, file_prefix, c2=.0216, debug=False
     '''
     # Checking for numerical stability
     if(dt > (dx**2 / (2 * c2))):
+        # TO DO: raise a warning instead of just exiting with a print statement
         print('Your selected time and depth steps result in numerically unstable '
              'behavior. Please retry with steps so that dt <= (dx^2) / (2 * c2).')
         sys.exit(1)
@@ -87,6 +111,7 @@ def heatdiff(xmax, tmax, dx, dt, offset_temp, file_prefix, c2=.0216, debug=False
     U = np.zeros((M,N))
 
     # Setting Initial and Boundary Conditions
+    # TO DO: make this an external test case and remove if statement
     if(validation_case):
         U[:, 0] = 4*xgrid - 4*xgrid**2
         U[0, :] = 0
@@ -116,16 +141,18 @@ def heatdiff(xmax, tmax, dx, dt, offset_temp, file_prefix, c2=.0216, debug=False
 
     # No plots generated for the validation case. Just printing the table.
     if not validation_case:
+        # TO DO: move outside of the function
         # PLOT #1 = Space-Time Heat Map
         # Setting up plot, axes, and labels
         fig, ax1 = plt.subplots(1, 1)
-        map = ax1.pcolor(tgrid / 365, xgrid, U, cmap='seismic', vmin=-25, vmax=25)
+        # TO DO: change map so not redefining python map function
+        colormap = ax1.pcolor(tgrid / 365, xgrid, U, cmap='seismic', vmin=-25, vmax=25)
         ax1.set_title('Ground Temperature: Kangerlussuaq, Greenland')
         ax1.set_xlabel('Time (Years)', fontsize = 14)
         ax1.invert_yaxis()
         ax1.set_ylabel('Depth (m)', fontsize = 14)
         plt.figtext(0.5, -0.04, f"Temperature Offset: {offset_temp}°C", ha="center", fontsize=12)
-        plt.colorbar(map, ax=ax1, label='Temperature ($C$)')
+        plt.colorbar(colormap, ax=ax1, label='Temperature ($C$)')
         fig.savefig(f"{file_prefix}_heat_map.png", dpi=300, bbox_inches='tight')
         
         # PLOT #2 = Seasonal Temperature Profiles
@@ -153,7 +180,7 @@ def heatdiff(xmax, tmax, dx, dt, offset_temp, file_prefix, c2=.0216, debug=False
             # Method without usig linear interpolation has shown to be sufficiently accurate
             if abs(summer[i]) < 1e-2:  
                 permafrost_depth = xgrid[i]
-                permafrost_index = i
+                permafrost_index = i  # i think this is redundant variable?
                 # Stop after finding the first crossing from the bottom
                 break  
 
@@ -192,11 +219,37 @@ def heatdiff(xmax, tmax, dx, dt, offset_temp, file_prefix, c2=.0216, debug=False
     # Return grid and result:
     return xgrid, tgrid, U
 
+def unit_test():
+    """
+    Function completes a unit test to verify if the solver
+    is working correctly. Does this using the solution given 
+    in the lab manual.
+    """
+    # Solution to problem 10.3 from fink/matthews as a nested list:
+    sol10p3 = [[0.000000, 0.640000, 0.960000, 0.960000, 0.640000, 0.000000],
+        [0.000000, 0.480000, 0.800000, 0.800000, 0.480000, 0.000000],
+        [0.000000, 0.400000, 0.640000, 0.640000, 0.400000, 0.000000],
+        [0.000000, 0.320000, 0.520000, 0.520000, 0.320000, 0.000000],
+        [0.000000, 0.260000, 0.420000, 0.420000, 0.260000, 0.000000],
+        [0.000000, 0.210000, 0.340000, 0.340000, 0.210000, 0.000000],
+        [0.000000, 0.170000, 0.275000, 0.275000, 0.170000, 0.000000],
+        [0.000000, 0.137500, 0.222500, 0.222500, 0.137500, 0.000000],
+        [0.000000, 0.111250, 0.180000, 0.180000, 0.111250, 0.000000],
+        [0.000000, 0.090000, 0.145625, 0.145625, 0.090000, 0.000000],
+        [0.000000, 0.072812, 0.117813, 0.117813, 0.072812, 0.000000]]
+    
+    # Convert to an array and transpose it to get correct ordering:
+    sol10p3 = np.array(sol10p3).transpose()
+
+    
+    
 # main definition
 def main():
 # NOTE: all plots were deleted before uploading to Github
 # NOTE: due to computation time, do NOT try running all lines here at once.
 # Instead, comment out all the ones you don't want to run, running one or two at a time
+
+# could simplify this a lot to reduce the compute time, instead do a convergence check then exit
 
 ### QUESTION 1 ###
     heatdiff(1, .2, .2, .02, 0, "NA", c2 = 1, validation_case=True) # Figure 2
