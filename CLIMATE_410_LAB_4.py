@@ -269,9 +269,21 @@ def unit_test(U):
     # Convert to an array and transpose it to get correct ordering:
     sol10p3 = np.array(sol10p3).transpose()
     if np.sum(U-sol10p3) <= 1E-8:
-        print('Unit Test Passed')
+        print('Unit Test Passed - correct values relative to test solution')
     else:
         print('Warning - Unit Test Failed! Check solver equations.')
+
+def test_unstable():
+    """
+    Unit test to show a warning is raised if unstable initial conditions are
+    passed into the function.
+    """
+    try:
+        heatdiff(xmax=100,tmax=1825,dx=2,dt=100,offset_temp=0,file_prefix='',plot=False)
+    except ValueError:
+        print('Unit Test Passed - Value error for unstable conditions caught')
+    else:
+        print('Unstable conditions not caught by solver, check equations.')
 
 def question_one():
     """
@@ -323,6 +335,7 @@ def main():
     # NOTE: all plots were deleted before uploading to Github
     # NOTE: due to computation time, do NOT try running all lines here at once.
     # Instead, comment out all the ones you don't want to run, running one or two at a time
+    test_unstable()
     question_one()  # run question 1 (unit test and baseline)
     question_two()  # run question 2 (climate shifts)
 
